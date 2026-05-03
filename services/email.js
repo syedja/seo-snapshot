@@ -1,0 +1,129 @@
+const { Resend } = require('resend');
+
+const resend = new Resend(process.env.RESEND_API_KEY);
+
+/**
+ * Send the SEO report PDF to the customer.
+ * @param {string} email - recipient email
+ * @param {string} domain - the analyzed domain
+ * @param {number} score - SEO score 0-100
+ * @param {Buffer} pdfBuffer - the generated PDF
+ */
+async function sendReportEmail(email, domain, score, pdfBuffer) {
+  const scoreColor = score >= 80 ? '#10b981' : score >= 60 ? '#f59e0b' : '#ef4444';
+  const scoreLabel = score >= 80 ? 'Great' : score >= 60 ? 'Needs Work' : 'Critical Issues';
+
+  const { data, error } = await resend.emails.send({
+    from: `${process.env.FROM_NAME || 'SEO Snapshot'} <${process.env.FROM_EMAIL}>`,
+    to: [email],
+    subject: `Your SEO Report for ${domain} — Score: ${score}/100`,
+    attachments: [
+      {
+        filename: `seo-report-${domain}.pdf`,
+        content: pdfBuffer.toString('base64'),
+      },
+    ],
+    html: `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Your SEO Report</title>
+</head>
+<body style="margin:0;padding:0;background:#0a0f1e;font-family:'DM Sans',Helvetica,Arial,sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#0a0f1e;padding:40px 20px;">
+  <tr>
+    <td align="center">
+      <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%">
+
+        <!-- HEADER -->
+        <tr>
+          <td style="background:linear-gradient(135deg,#0d9488,#0f766e);border-radius:16px 16px 0 0;padding:32px 36px;">
+            <table width="100%" cellpadding="0" cellspacing="0">
+              <tr>
+                <td>
+                  <div style="font-size:11px;color:#ccfbf1;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:6px">SEO Snapshot</div>
+                  <div style="font-size:24px;font-weight:700;color:#ffffff;line-height:1.2">Your SEO Report<br>is ready 🎉</div>
+                  <div style="font-size:14px;color:rgba(255,255,255,0.75);margin-top:8px">${domain}</div>
+                </td>
+                <td align="right" style="vertical-align:top">
+                  <div style="background:rgba(0,0,0,0.25);border-radius:50%;width:80px;height:80px;display:inline-flex;align-items:center;justify-content:center;text-align:center;padding-top:18px;">
+                    <div style="font-size:30px;font-weight:700;color:${scoreColor};line-height:1">${score}</div>
+                    <div style="font-size:11px;color:rgba(255,255,255,0.5);margin-top:2px">/ 100</div>
+                  </div>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+
+        <!-- BODY -->
+        <tr>
+          <td style="background:#0f172a;padding:32px 36px;">
+
+            <p style="font-size:15px;color:#94a3b8;line-height:1.7;margin:0 0 24px">
+              Hi there! Your full SEO audit for <strong style="color:#e2e8f0">${domain}</strong> is attached to this email as a PDF.
+              Here's a quick snapshot of your results:
+            </p>
+
+            <!-- Score card -->
+            <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px">
+              <tr>
+                <td style="background:rgba(13,148,136,0.1);border:1px solid rgba(13,148,136,0.2);border-radius:12px;padding:20px;text-align:center">
+                  <div style="font-size:13px;color:#5eead4;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px">Overall SEO Score</div>
+                  <div style="font-size:52px;font-weight:700;color:${scoreColor};line-height:1">${score}</div>
+                  <div style="font-size:16px;color:#94a3b8;margin-top:4px">out of 100 — <strong style="color:${scoreColor}">${scoreLabel}</strong></div>
+                </td>
+              </tr>
+            </table>
+
+            <p style="font-size:14px;color:#64748b;line-height:1.7;margin:0 0 28px">
+              Open the attached PDF for your complete report including all 19 checks, specific fix recommendations, and your AI-powered action plan.
+            </p>
+
+            <!-- CTA -->
+            <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:32px">
+              <tr>
+                <td align="center">
+                  <a href="https://socialpostinginc.com" style="display:inline-block;background:linear-gradient(135deg,#0d9488,#0f766e);color:#ffffff;font-size:15px;font-weight:600;text-decoration:none;padding:14px 32px;border-radius:10px;">
+                    Grow Your Online Presence →
+                  </a>
+                </td>
+              </tr>
+            </table>
+
+            <hr style="border:none;border-top:1px solid rgba(255,255,255,0.06);margin:0 0 24px">
+
+            <p style="font-size:12px;color:#334155;line-height:1.7;margin:0;text-align:center">
+              This report was generated by <a href="https://socialpostinginc.com" style="color:#0d9488;text-decoration:none">SEO Snapshot</a> · Social Posting Inc.<br>
+              You received this because you purchased an SEO audit at seosnapshot.com.
+            </p>
+
+          </td>
+        </tr>
+
+        <!-- FOOTER -->
+        <tr>
+          <td style="background:#060b16;border-radius:0 0 16px 16px;padding:20px 36px;text-align:center">
+            <p style="font-size:11px;color:#1e293b;margin:0">
+              © 2026 Social Posting Inc. · <a href="https://socialpostinginc.com" style="color:#0d9488;text-decoration:none">socialpostinginc.com</a>
+            </p>
+          </td>
+        </tr>
+
+      </table>
+    </td>
+  </tr>
+</table>
+</body>
+</html>
+    `,
+    text: `Your SEO Report for ${domain}\n\nScore: ${score}/100 (${scoreLabel})\n\nYour full SEO audit is attached as a PDF.\n\nSEO Snapshot · Social Posting Inc.\nsocialpostinginc.com`,
+  });
+
+  if (error) throw new Error('Resend error: ' + JSON.stringify(error));
+  return data;
+}
+
+module.exports = { sendReportEmail };
